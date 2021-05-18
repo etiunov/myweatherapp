@@ -20,6 +20,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
   //To get weather from api, and send this weather data to UI
   Future<void> updateGeoposition() async {
     var weatherData = await WeatherDataModel().getLocationWeatherAPI();
+    var airData = await WeatherDataModel().getAirPollutionAPI();
     var weatherForecast = await WeatherForecast().getForecastAPI();
     Navigator.push(
       context,
@@ -27,6 +28,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
         builder: (context) => IphoneScreen(
           locationWeather: weatherData,
           forecastWeather: weatherForecast,
+          airPollution: airData,
         ),
       ),
     );

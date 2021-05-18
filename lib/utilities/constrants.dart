@@ -16,17 +16,18 @@ const kButtonTextStyle =
 const kConditionTextStyle = TextStyle(
   fontWeight: FontWeight.w300,
   fontFamily: 'Spartan MB',
-  fontSize: 100.0,
+  fontSize: 80.0,
 );
 
 const iPhoneTitleStyle = TextStyle(
-  fontWeight: FontWeight.w300,
+  fontWeight: FontWeight.w400,
   fontSize: 24.0,
   fontFamily: 'Roboto',
   // fontWeight: FontWeight.w400,
 );
 const iPhoneTextStyle1 = TextStyle(
-  fontSize: 24.0,
+  fontWeight: FontWeight.w300,
+  fontSize: 16.0,
   // fontFamily: 'Roboto',
 );
 const transTextStyle = TextStyle(
@@ -36,13 +37,13 @@ const transTextStyle = TextStyle(
 );
 
 const transTextStyle1 = TextStyle(
-  fontSize: 18.0,
+  fontSize: 24.0,
   // fontFamily: 'Roboto',
   // fontWeight: FontWeight.w300,
 );
 
 const iPhoneTextStyle = TextStyle(
-  fontSize: 18.0,
+  fontSize: 20.0,
   // fontFamily: 'Roboto',
   fontWeight: FontWeight.w300,
 );

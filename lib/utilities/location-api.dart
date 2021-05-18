@@ -6,6 +6,7 @@ import 'dart:convert';
 const String apiKey = '1ae7e5e12a8acea4a69085bbe0e73e6a';
 const openWeatherMapURL = 'https://api.openweathermap.org/data/2.5/weather';
 const forecastWeatherMapURL = 'https://api.openweathermap.org/data/2.5/onecall';
+const airPollutionURL = 'https://api.openweathermap.org/data/2.5/air_pollution';
 
 //Api parser and decoder
 class NetworkHelper {
@@ -41,8 +42,9 @@ class LocationGeopositionData {
   }
 }
 
-//Get location/city weather by passing link to NetworkHelper, and retrieving json body
+//Location/city weather
 class WeatherDataModel {
+  //Source:https://openweathermap.org/current
   Future<Map<String, dynamic>> getLocationWeatherAPI() async {
     LocationGeopositionData locationGeopositionData = LocationGeopositionData();
     await locationGeopositionData.getCurrentLocation();
@@ -53,81 +55,33 @@ class WeatherDataModel {
     return weatherData;
   }
 
+  //Source:https://openweathermap.org/current
   Future<dynamic> getCityWeatherAPI(String cityName) async {
     NetworkHelper networkHelper = NetworkHelper(
         "$openWeatherMapURL?q=$cityName&APPID=$apiKey&units=imperial");
     var weatherData = await networkHelper.getData();
     return weatherData;
   }
+
+  //Source: https://openweathermap.org/api/air-pollution
+  Future<dynamic> getAirPollutionAPI() async {
+    LocationGeopositionData locationGeopositionData = LocationGeopositionData();
+    await locationGeopositionData.getCurrentLocation();
+    NetworkHelper networkHelper = NetworkHelper(
+        "$airPollutionURL?lat=${locationGeopositionData.latitude}&lon=${locationGeopositionData.longitude}&APPID=$apiKey");
+    var pollutionData = await networkHelper.getData();
+    return pollutionData;
+  }
 }
 
-//Loads next 5 days forecast
+//Next 7 days forecast, Source: https://openweathermap.org/api/one-call-api
 class WeatherForecast {
   Future<Map<String, dynamic>> getForecastAPI() async {
     LocationGeopositionData locationGeopositionData = LocationGeopositionData();
     await locationGeopositionData.getCurrentLocation();
     NetworkHelper networkHelper = NetworkHelper(
         "$forecastWeatherMapURL?lat=${locationGeopositionData.latitude}&lon=${locationGeopositionData.longitude}&APPID=$apiKey&units=imperial");
-
     var weatherForecast = await networkHelper.getData();
     return weatherForecast;
   }
-
-  // "https://api.openweathermap.org/data/2.5/onecall?lat=34.2656&lon=-118.871&APPID=1ae7e5e12a8acea4a69085bbe0e73e6a&units=imperial"
-
-  // Future<Map<String, dynamic>> sevenDaysForecastAPI(dynamic cityName) async {
-  //   NetworkHelper networkHelper = NetworkHelper(
-  //       "https://api.openweathermap.org/data/2.5/forecast/daily?q=$cityName&cnt=7&appid=7e0bcae076b4db333e125664be2f6d3d");
-  //   var weatherForecast = await networkHelper.getData();
-  //   // print(weatherForecast);
-  //   return weatherForecast;
-  // }
 }
-
-// This api requires a paid subscription
-// class HourlyForecast {
-//   Future<Map<String, dynamic>> getHourlyAPI() async {
-//     LocationGeopositionData locationGeopositionData = LocationGeopositionData();
-//     await locationGeopositionData.getCurrentLocation();
-//     NetworkHelper networkHelper = NetworkHelper(
-//         "https://pro.openweathermap.org/data/2.5/forecast/hourly?lat=${locationGeopositionData.latitude}&lon=${locationGeopositionData.longitude}&APPID=$apiKey&units=imperial");
-//
-//     var hourlyForecast = await networkHelper.getData();
-//     print(hourlyForecast);
-//     return hourlyForecast;
-//   }
-// }
-
-// class WeatherJSON {
-//   var dt;
-//   var temp;
-//   var icon;
-//
-//   WeatherJSON({this.dt, this.temp, this.icon});
-//   factory WeatherJSON.fromJson(Map<String, dynamic> json) {
-//     return WeatherJSON(
-//       dt: json["list"][0]["dt"] as dynamic,
-//       temp: json["list"][0]["main"]["temp"] as dynamic,
-//       icon: json["list"][0]["weather"][0]["icon"] as dynamic,
-//     );
-//   }
-// }
-//
-
-// Future<void> loadForecast(dynamic weatherData) async {
-//   var weatherForecast = await WeatherForecast().getForecastAPI();
-//   // setState((){null});
-//   var timeStamp = weatherForecast["list"][0]["dt"];
-//   var tempStamp = weatherForecast["list"][0]["main"]["temp"];
-//   var iconStamp = weatherForecast["list"][0]["weather"][0]["icon"];
-//
-//   print(timeStamp);
-//   print(tempStamp);
-//   print(iconStamp);
-// }
-
-// /// Returns the difference (in full days) between the provided date and today.
-// int calculateDifference(DateTime date) {
-//   DateTime now = DateTime.now();
-//   return DateTime(date.year, date.month, date.day).difference(DateTime(now.year, now.month, now.day)).inDays;
-// }

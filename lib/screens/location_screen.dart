@@ -1,6 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:core';
 import 'package:intl/intl.dart';
@@ -18,7 +19,12 @@ class IphoneScreen extends StatefulWidget {
   final locationWeather;
   final forecastWeather;
   final cityForecast;
-  IphoneScreen({this.locationWeather, this.forecastWeather, this.cityForecast});
+  final airPollution;
+  IphoneScreen(
+      {this.locationWeather,
+      this.forecastWeather,
+      this.cityForecast,
+      this.airPollution});
 
   @override
   _IphoneScreenState createState() => _IphoneScreenState();
@@ -30,12 +36,14 @@ class _IphoneScreenState extends State<IphoneScreen> {
   TimeCounter timeCounter = TimeCounter();
   BackgroundUI backgroundUI = BackgroundUI();
 
-  var hoursList = List(12);
-  var weekDayList = List(14);
+  List<dynamic> hoursList = List(12);
+  List<dynamic> weekDayList = List(7);
   List<String> temperatureList = [];
-  // var iconList = List(12);
-  var minTemperatureList = [];
-  var maxTemperatureList = [];
+  List<String> dailyIconList = List(7);
+  var minTemperatureList = List(7);
+  var maxTemperatureList = List(7);
+  List<String> hourlyIconList = List(12);
+  var hourlyTempList = List(12);
 
   var cityTemp,
       cityName,
@@ -58,7 +66,8 @@ class _IphoneScreenState extends State<IphoneScreen> {
       locationFeelsLike,
       locationWindDeg,
       locationCountry,
-      typedCityName;
+      typedCityName,
+      airPollutionIndex;
 
   @override
   void initState() {
@@ -66,14 +75,16 @@ class _IphoneScreenState extends State<IphoneScreen> {
     backgroundUI.updateBackgroudImage();
     updateUI(widget.locationWeather);
     loadForecast(widget.forecastWeather);
+    airPollutionUI(widget.airPollution);
     dayOfWeek();
     timeNow();
   }
 
+  //Hours list for horizontal scroll
   Future<void> timeNow() async {
     var today = DateTime.now();
     for (var i = 0; i < 12; i++) {
-      var hours = await DateFormat('ha')
+      var hours = DateFormat('ha')
           .format(today.add(Duration(hours: i + 1)))
           .toLowerCase()
           .toString();
@@ -86,8 +97,8 @@ class _IphoneScreenState extends State<IphoneScreen> {
   //Week days to vertical scroll
   Future<void> dayOfWeek() async {
     var today = DateTime.now();
-    for (var i = 0; i < 14; i++) {
-      var days = await DateFormat('E')
+    for (var i = 0; i < 7; i++) {
+      var days = DateFormat('EEEE')
           .format(today.add(Duration(days: i + 1)))
           .toString();
       setState(() {
@@ -98,8 +109,6 @@ class _IphoneScreenState extends State<IphoneScreen> {
 
   //Fetch api for weather data to UI
   Future<void> updateUI(dynamic weatherData) async {
-    // var weatherData = await WeatherDataModel().getLocationWeatherAPI();
-    // var weatherData = await WeatherDataModel().getCityWeatherAPI(locationCityName);
     setState(() {
       locationMainTemperature = weatherData['main']['temp'].toInt();
       locationMaxTemperature = weatherData['main']['temp_max'].toInt();
@@ -108,223 +117,194 @@ class _IphoneScreenState extends State<IphoneScreen> {
       locationConditionIcon = weatherData['weather'][0]['icon'];
       locationCityName = weatherData['name'];
       locationDescription = weatherData['weather'][0]['description'];
-      // var timeSunrise = weatherData['sys']['sunrise'];
       locationSunrise = DateFormat('jm').format(
           DateTime.fromMillisecondsSinceEpoch(
               (weatherData['sys']['sunrise']) * 1000));
-      // var timeSunset = weatherData['sys']['sunset'];
       locationSunset = DateFormat('jm').format(
           DateTime.fromMillisecondsSinceEpoch(
               (weatherData['sys']['sunset']) * 1000));
       locationPressure = weatherData['main']['pressure'];
       locationHumidity = weatherData['main']['humidity'];
       locationWind = weatherData['wind']['speed'];
-      locationFeelsLike = weatherData['main']['feels_like'];
-      // var windDeg1 = weatherData['wind']['deg'];
+      locationFeelsLike = weatherData['main']['feels_like'].toInt();
       locationWindDeg = (weatherData['wind']['deg']).toInt();
       locationCountry = weatherData['sys']['country'];
     });
   }
 
+  //Air pollution index
+  Future<void> airPollutionUI(dynamic pollutionData) async {
+    setState(() {
+      airPollutionIndex = pollutionData["list"][0]["main"]["aqi"];
+    });
+
+    print(airPollutionIndex);
+  }
+
   //Air quality bar
-  String airQuality(windDegree) {
-    if (windDegree < 100) {
+  String airQuality() {
+    if (airPollutionIndex == 1) {
       return 'Good';
-    } else if (windDegree < 240) {
-      return 'Medium';
+    } else if (airPollutionIndex == 2) {
+      return 'Fair';
+    } else if (airPollutionIndex == 3) {
+      return 'Moderate';
+    } else if (airPollutionIndex == 4) {
+      return 'Poor';
     } else {
-      return 'High';
+      return 'Very Poor';
     }
   }
 
   Future<void> loadForecast(dynamic weatherForecast) async {
-    var icon = weatherForecast['icon'];
-
-    print(weatherForecast);
+    for (var i = 0; i < 7; i++) {
+      var icon = weatherForecast["daily"][i]["weather"][0]["icon"];
+      var tempMax = weatherForecast["daily"][i]["temp"]["max"].toInt();
+      var tempMin = weatherForecast["daily"][i]["temp"]["min"].toInt();
+      setState(() {
+        dailyIconList[i] = icon;
+        maxTemperatureList[i] = tempMax;
+        minTemperatureList[i] = tempMin;
+      });
+    }
+    for (var i = 0; i < 12; i++) {
+      var iconHours = weatherForecast["hourly"][i]["weather"][0]["icon"];
+      var temperatureHours = weatherForecast["hourly"][i]["temp"].toInt();
+      setState(() {
+        hourlyIconList[i] = iconHours;
+        hourlyTempList[i] = temperatureHours;
+      });
+    }
   }
-
-  // Future<void> loadForecast(dynamic weatherForecast) async {
-  //   var weatherForecast = await WeatherForecast().getForecastAPI();
-  //   setState(() {
-  //     var timeStamp0 = weatherForecast["list"][0]["dt"];
-  //     var dayname0 = DateTime.fromMillisecondsSinceEpoch(timeStamp0);
-  //     convertedForecastDate0 = DateFormat('EEEE').format(dayname0);
-  //     var tempStamp0 = weatherForecast["list"][0]["main"]["temp"];
-  //     convertedTempAPI0 = tempStamp0.toInt();
-  //
-  //     iconStamp0 = weatherForecast["list"][0]["weather"][0]["icon"];
-  //
-  //     var timeStamp1 = weatherForecast["list"][1]["dt"];
-  //     var dayname1 = DateTime.fromMillisecondsSinceEpoch(timeStamp1 * 1000);
-  //     convertedForecastDate1 = DateFormat('EEEE').format(dayname1);
-  //     var tempStamp1 = weatherForecast["list"][1]["main"]["temp"];
-  //     convertedTempAPI1 = tempStamp1.toInt();
-  //     iconStamp1 = weatherForecast["list"][1]["weather"][0]["icon"];
-  //
-  //     var timeStamp2 = weatherForecast["list"][2]["dt"];
-  //     var dayname2 = DateTime.fromMillisecondsSinceEpoch(timeStamp2 * 1000);
-  //     convertedForecastDate2 = DateFormat('EEEE').format(dayname2);
-  //
-  //     var tempStamp2 = weatherForecast["list"][2]["main"]["temp"];
-  //     convertedTempAPI2 = tempStamp2.toInt();
-  //     iconStamp2 = weatherForecast["list"][2]["weather"][0]["icon"];
-  //
-  //     var timeStamp3 = weatherForecast["list"][3]["dt"];
-  //     var dayname3 = DateTime.fromMillisecondsSinceEpoch(timeStamp3 * 1000);
-  //     convertedForecastDate3 = DateFormat('EEEE').format(dayname3);
-  //
-  //     var tempStamp3 = weatherForecast["list"][3]["main"]["temp"];
-  //     convertedTempAPI3 = tempStamp3.toInt();
-  //     iconStamp3 = weatherForecast["list"][3]["weather"][0]["icon"];
-  //
-  //     var timeStamp4 = weatherForecast["list"][4]["dt"];
-  //     var dayname4 = DateTime.fromMillisecondsSinceEpoch(timeStamp4 * 1000);
-  //     convertedForecastDate4 = DateFormat('EEEE').format(dayname4);
-  //     var tempStamp4 = weatherForecast["list"][4]["main"]["temp"];
-  //     convertedTempAPI4 = tempStamp4.toInt();
-  //     iconStamp4 = weatherForecast["list"][4]["weather"][0]["icon"];
-  //
-  //     var timeStamp5 = weatherForecast["list"][5]["dt"];
-  //     var dayname5 = DateTime.fromMillisecondsSinceEpoch(timeStamp5 * 1000);
-  //     convertedForecastDate5 = DateFormat('EEEE').format(dayname5);
-  //     var tempStamp5 = weatherForecast["list"][5]["main"]["temp"];
-  //     convertedTempAPI5 = tempStamp5.toInt();
-  //     iconStamp5 = weatherForecast["list"][5]["weather"][0]["icon"];
-  //
-  //     var timeStamp6 = weatherForecast["list"][6]["dt"];
-  //     var dayname6 = DateTime.fromMillisecondsSinceEpoch(timeStamp6 * 1000);
-  //     convertedForecastDate6 = DateFormat('EEEE').format(dayname6);
-  //     var tempStamp6 = weatherForecast["list"][6]["main"]["temp"];
-  //     convertedTempAPI6 = tempStamp6.toInt();
-  //     iconStamp6 = weatherForecast["list"][6]["weather"][0]["icon"];
-  //
-  //     var timeStamp7 = weatherForecast["list"][7]["dt"];
-  //     var dayname7 = DateTime.fromMillisecondsSinceEpoch(timeStamp7 * 1000);
-  //     convertedForecastDate7 = DateFormat('EEEE').format(dayname7);
-  //     var tempStamp7 = weatherForecast["list"][7]["main"]["temp"];
-  //     convertedTempAPI7 = tempStamp7.toInt();
-  //     iconStamp7 = weatherForecast["list"][7]["weather"][0]["icon"];
-  //   });
-  // }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        body: Container(
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage(
-                  backgroundUI.backgroundImage,
-                ),
-                fit: BoxFit.cover,
-                colorFilter: ColorFilter.mode(
-                  Colors.white.withOpacity(0.8),
-                  BlendMode.dstATop,
-                ),
-              ),
-            ),
-            constraints: BoxConstraints.expand(),
-            child: SafeArea(
-              child: CustomScrollView(
-                  physics: const BouncingScrollPhysics(
-                      parent: AlwaysScrollableScrollPhysics()),
-                  slivers: [
-                    SliverAppBar(
-                      stretch: true,
-                      onStretchTrigger: () {
-                        // Function callback for stretch
-                        return Future<void>.value();
-                      },
-                      pinned: true,
-                      backgroundColor: Colors.transparent,
-                      expandedHeight: 100.0,
-                      flexibleSpace: FlexibleSpaceBar(
-                        stretchModes: const <StretchMode>[
-                          StretchMode.zoomBackground,
-                          StretchMode.blurBackground,
-                          StretchMode.fadeTitle,
-                        ],
-                        // background:
-                        // Image(
-                        //   image: AssetImage(
-                        //     backgroundUI.backgroundImage,
-                        //   ),
-                        //   fit: BoxFit.fitWidth,
-                        //   alignment: Alignment.topCenter,
-                        // ),
-                        // background: Stack(
-                        //   fit: StackFit.expand,
-                        //   children: [
-                        //     Image.network(
-                        //       'https://flutter.github.io/assets-for-api-docs/assets/widgets/owl-2.jpg',
-                        //       fit: BoxFit.cover,
-                        //     ),
-                        //     DecoratedBox(
-                        //       decoration: BoxDecoration(
-                        //         gradient: LinearGradient(
-                        //           begin: Alignment(0.0, 0.5),
-                        //           end: Alignment(0.0, 0.0),
-                        //           colors: <Color>[
-                        //             Color(0x60000000),
-                        //             Color(0x00000000),
-                        //           ],
-                        //         ),
-                        //       ),
-                        //     ),
-                        //   ],
-                        // ),
-                        title: Text(
-                          '$locationCityName' ?? '--',
-                          style: iPhoneTitleStyle,
-                        ),
-                        centerTitle: true,
-                      ),
-                      backwardsCompatibility: false,
-                      shadowColor: Colors.transparent,
-                      leading: IconButton(
-                        icon: Icon(Icons.near_me),
-                        tooltip: 'Get location',
-                        onPressed: () async {
-                          var weatherDataCall =
-                              await weatherDataModel.getLocationWeatherAPI();
-                          updateUI(weatherDataCall);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Center(child: CircularProgressIndicator()),
+        Container(
+          child: Image.asset(
+            backgroundUI.backgroundImage,
+            fit: BoxFit.cover,
+          ),
+          //TODO Add random city
+          // Image.network(
+          //   'https://loving-newyork.com/wp-content/uploads/2018/09/Empire-State-Building-New-York_160914155540010-e1537863672134.jpg'),
+        ),
+        Positioned.fill(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
+            child: Scaffold(
+              backgroundColor: Colors.black12,
+              body: SafeArea(
+                child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics()),
+                    slivers: [
+                      // SliverToBoxAdapter(
+                      //   child: Center(child: CircularProgressIndicator()),
+                      // ),
+                      SliverAppBar(
+                        stretch: true,
+                        onStretchTrigger: () {
+                          // Function callback for stretch
+                          return Future<void>.value();
                         },
-                      ),
-                      actions: [
-                        IconButton(
-                          icon: Icon(Icons.location_city),
-                          tooltip: 'Add city',
+                        pinned: true,
+                        primary: true,
+                        backgroundColor: Colors.transparent,
+                        expandedHeight: 120.0,
+                        flexibleSpace: Center(
+                          child: FlexibleSpaceBar(
+                            collapseMode: CollapseMode.parallax,
+                            background: Container(
+                              color: Colors.transparent,
+                            ),
+                            stretchModes: const <StretchMode>[
+                              StretchMode.zoomBackground,
+                              StretchMode.blurBackground,
+                              StretchMode.fadeTitle,
+                            ],
+                            // background: Stack(
+                            //   fit: StackFit.expand,
+                            //   children: [
+                            //     // Image.asset(
+                            //     //   backgroundUI.backgroundImage,
+                            //     //   fit: BoxFit.cover,
+                            //     // ),
+                            //     Positioned.fill(
+                            //       child: BackdropFilter(
+                            //         filter: ImageFilter.blur(
+                            //             sigmaX: 3.0, sigmaY: 3.0),
+                            //       ),
+                            //     ),
+                            //   ],
+                            // ),
+                            // background: Image(
+                            //   image:
+                            //   AssetImage(
+                            //     backgroundUI.backgroundImage,
+                            //   ),
+                            //   fit: BoxFit.fitWidth,
+                            //   alignment: Alignment.topCenter,
+                            // ),
+                            // background: Stack(
+                            //   fit: StackFit.expand,
+                            //   children: [
+                            //     Image.network(
+                            //       'https://flutter.github.io/assets-for-api-docs/assets/widgets/owl-2.jpg',
+                            //       fit: BoxFit.cover,
+                            //     ),
+                            //     DecoratedBox(
+                            //       decoration: BoxDecoration(
+                            //         gradient: LinearGradient(
+                            //           begin: Alignment(0.0, 0.5),
+                            //           end: Alignment(0.0, 0.0),
+                            //           colors: <Color>[
+                            //             Color(0x60000000),
+                            //             Color(0x00000000),
+                            //           ],
+                            //         ),
+                            //       ),
+                            //     ),
+                            //   ],
+                            // ),
+                            title: Text(
+                              '$locationCityName' ?? '--',
+                              style: iPhoneTitleStyle,
+                            ),
+                            centerTitle: true,
+                          ),
+                        ),
+                        backwardsCompatibility: false,
+                        shadowColor: Colors.transparent,
+                        leading: IconButton(
+                          icon: Icon(Icons.near_me),
+                          tooltip: 'Get location',
                           onPressed: () async {
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(10.0)),
-                                  title: Text('Enter city name'),
-                                  content: TextField(
-                                    onSubmitted: (value) async {
-                                      typedCityName = value;
-                                      Navigator.pop(context);
-                                      if (typedCityName != null) {
-                                        var weatherData = await weatherDataModel
-                                            .getCityWeatherAPI(typedCityName);
-                                        updateUI(weatherData);
-                                      }
-                                      print(typedCityName);
-                                    },
-                                  ),
-                                  actions: [
-                                    OutlinedButton(
-                                      onPressed: () async {
+                            var weatherDataCall =
+                                await weatherDataModel.getLocationWeatherAPI();
+                            updateUI(weatherDataCall);
+                          },
+                        ),
+                        actions: [
+                          IconButton(
+                            icon: Icon(Icons.add),
+                            tooltip: 'Add city',
+                            onPressed: () async {
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10.0)),
+                                    title: Text('Enter city name'),
+                                    content: TextField(
+                                      onSubmitted: (value) async {
+                                        typedCityName = value;
                                         Navigator.pop(context);
-                                      },
-                                      child: Text('Cancel'),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () async {
-                                        Navigator.pop(context, typedCityName);
                                         if (typedCityName != null) {
                                           var weatherData =
                                               await weatherDataModel
@@ -334,618 +314,451 @@ class _IphoneScreenState extends State<IphoneScreen> {
                                         }
                                         print(typedCityName);
                                       },
-                                      child: Text('Next'),
                                     ),
-                                  ],
+                                    actions: [
+                                      OutlinedButton(
+                                        onPressed: () async {
+                                          Navigator.pop(context);
+                                        },
+                                        child: Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          Navigator.pop(context, typedCityName);
+                                          if (typedCityName != null) {
+                                            var weatherData =
+                                                await weatherDataModel
+                                                    .getCityWeatherAPI(
+                                                        typedCityName);
+                                            updateUI(weatherData);
+                                          }
+                                          print(typedCityName);
+                                        },
+                                        child: Text('Next'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      // SliverToBoxAdapter(
+                      //   child: SizedBox(
+                      //     height: 1000,
+                      //     child: Placeholder(),
+                      //   ),
+                      // ),
+                      // SliverPersistentHeader(
+                      //   pinned: true,
+                      //   floating: false,
+                      //   delegate: Delegate(
+                      //     delegateChild: Center(
+                      //       child: Column(
+                      //           mainAxisAlignment: MainAxisAlignment.center,
+                      //           children: [
+                      //             Text(
+                      //               '$locationCityName' ?? '--',
+                      //               style: iPhoneTitleStyle,
+                      //             ),
+                      //             Text(
+                      //               '$locationConditionMessage',
+                      //               style: iPhoneTextStyle1,
+                      //             ),
+                      //           ]),
+                      //     ),
+                      //   ),
+                      // ),
+                      SliverList(
+                        delegate: SliverChildListDelegate([
+                          Container(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 18.0),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    '$locationConditionMessage',
+                                    style: iPhoneTextStyle1,
+                                  ),
+                                  Text(
+                                    '$locationMainTemperature°',
+                                    style: kConditionTextStyle,
+                                  ),
+                                  Text(
+                                    'H:$locationMaxTemperature° L:$locationMinTemperature°',
+                                    style: iPhoneTextStyle,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ]),
+                      ),
+                      SliverPersistentHeader(
+                        pinned: true,
+                        floating: false,
+                        delegate: Delegate(
+                          hoursList: hoursList,
+                          hourlyIconList: hourlyIconList,
+                          hourlyTempList: hourlyTempList,
+                          delegateChild: Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(color: Colors.white24),
+                                bottom: BorderSide(color: Colors.white24),
+                              ),
+                            ),
+                            child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.all(8.0),
+                                itemCount: hoursList.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  return Column(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(left: 10.0),
+                                        child: Text(
+                                          '${hoursList[index]}',
+                                          style: iPhoneTextStyle,
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(left: 10.0),
+                                        child: Image.network(
+                                          'https://openweathermap.org/img/wn/${hourlyIconList[index]}.png',
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(left: 10.0),
+                                        child: Text(
+                                          '${hourlyTempList[index]}°',
+                                          style: iPhoneTextStyle,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }),
+                          ),
+                        ),
+                      ),
+                      SliverGrid.count(
+                        childAspectRatio: 1.1,
+                        crossAxisCount: 1,
+                        children: [
+                          ListView.builder(
+                              // padding: const EdgeInsets.all(8),
+                              itemCount: weekDayList.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 24.0, right: 24.0),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Expanded(
+                                        flex: 1,
+                                        child: Text(
+                                          '${weekDayList[index]}',
+                                          style: iPhoneTextStyle,
+                                        ),
+                                      ),
+                                      Image.network(
+                                        'https://openweathermap.org/img/wn/${dailyIconList[index]}.png',
+                                      ),
+                                      Expanded(
+                                        flex: 1,
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              '${maxTemperatureList[index]}',
+                                              style: iPhoneTextStyle,
+                                            ),
+                                            SizedBox(width: 10),
+                                            Opacity(
+                                              opacity: 0.50,
+                                              child: Text(
+                                                '${minTemperatureList[index]}',
+                                                style: iPhoneTextStyle,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 );
-                              },
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    SliverList(
-                      delegate: SliverChildListDelegate([
-                        Column(
-                          children: [
-                            Text(
-                              '$locationConditionMessage',
-                              style: iPhoneTextStyle,
+                              }),
+                        ],
+                      ),
+                      SliverGrid.count(
+                        crossAxisCount: 1,
+                        childAspectRatio: 5.0,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(color: Colors.white24),
+                              ),
                             ),
-                            Text(
-                              '$locationMainTemperature°',
-                              style: kConditionTextStyle,
+                            child: ListTile(
+                              title: Text(
+                                'Today: $locationDescription. It\'s $locationMainTemperature°; the high today is forecast as $locationMaxTemperature°.',
+                                maxLines: 2,
+                                softWrap: true,
+                                style: iPhoneTextStyle,
+                              ),
                             ),
-                            Text(
-                              'H:$locationMaxTemperature° L:$locationMinTemperature°',
-                              style: iPhoneTextStyle,
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(color: Colors.white24),
+                              ),
                             ),
-                            SizedBox(
-                              height: 20.0,
-                            ),
-                          ],
-                        ),
-                      ]),
-                    ),
-                    SliverList(
-                      delegate: SliverChildListDelegate([
-                        Column(
-                          children: [
-                            Divider(
-                              thickness: 2.0,
-                            ),
-                          ],
-                        ),
-                      ]),
-                    ),
-                    SliverGrid.count(
-                      childAspectRatio: 4.0,
-                      crossAxisCount: 1,
-                      children: [
-                        ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            // padding: const EdgeInsets.all(8),
-                            itemCount: hoursList.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              return Column(
+                            child: ListTile(
+                              title: Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text('${hoursList[index]}'),
+                                  Opacity(
+                                    opacity: 0.50,
+                                    child: Text(
+                                      'AIR QUALITY',
+                                      style: transTextStyle,
+                                    ),
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    // child: Text('${iconList[index]}' ?? 'icon'),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text('temp'),
-                                  ),
-                                ],
-                              );
-                            }),
-                      ],
-                    ),
-                    SliverList(
-                      delegate: SliverChildListDelegate(
-                        [
-                          Divider(
-                            thickness: 2.0,
-                          ),
-                        ],
-                      ),
-                    ),
-                    SliverGrid.count(
-                      childAspectRatio: 1.6,
-                      crossAxisCount: 1,
-                      children: [
-                        ListView.builder(
-                            // scrollDirection: Axis.horizontal,
-                            // padding: const EdgeInsets.all(8),
-                            itemCount: weekDayList.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              return Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text('${weekDayList[index]}'),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text('icon'),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Row(
-                                      children: [
-                                        Text('Max'),
-                                        Text(' '),
-                                        Text('Min'),
-                                      ],
+                                  Opacity(
+                                    opacity: 0.50,
+                                    child: Text(
+                                      'AQI ($locationCountry)',
+                                      style: transTextStyle,
                                     ),
                                   ),
                                 ],
-                              );
-                            }),
-                      ],
-                    ),
-                    SliverList(
-                      delegate: SliverChildListDelegate(
-                        [
-                          Divider(
-                            thickness: 2.0,
-                          ),
-                          ListTile(
-                            title: Text(
-                              'Today: $locationDescription. It\'s $locationMainTemperature°; the high today is forecast as $locationMaxTemperature°.',
-                              maxLines: 2,
-                              softWrap: true,
-                              style: iPhoneTextStyle,
+                              ),
+                              subtitle: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    '$airPollutionIndex - ${airQuality()}',
+                                    style: iPhoneTextStyle,
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: Container(
+                                      child: SliderTheme(
+                                        data: SliderTheme.of(context).copyWith(
+                                          thumbColor: Colors.white,
+                                          activeTrackColor: Colors.transparent,
+                                          thumbShape: RoundSliderThumbShape(
+                                            enabledThumbRadius: 8.0,
+                                          ),
+                                        ),
+                                        child: Slider.adaptive(
+                                            value: airPollutionIndex.toDouble(),
+                                            min: 0.0,
+                                            max: 5.0,
+                                            onChanged: (double windDeg1) {
+                                              setState(() {
+                                                print('$airPollutionIndex');
+                                              });
+                                            }),
+                                      ),
+                                      height: 8.0,
+                                      decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.all(
+                                              Radius.circular(8.0)),
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topRight,
+                                            end: Alignment.bottomLeft,
+                                            stops: [
+                                              0.3,
+                                              0.4,
+                                              0.7,
+                                              0.8,
+                                              0.9,
+                                            ],
+                                            colors: [
+                                              Colors.brown,
+                                              Colors.deepPurple,
+                                              Colors.red,
+                                              Colors.yellow,
+                                              Colors.green,
+                                            ],
+                                          )),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          Divider(
-                            thickness: 2.0,
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(color: Colors.white24),
+                              ),
+                            ),
+                            child: ListTileWidget(
+                                leftHeader: 'SUNRISE',
+                                rightHeader: 'SUNSET',
+                                leftData: locationSunrise,
+                                rightData: locationSunset),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(color: Colors.white24),
+                              ),
+                            ),
+                            child: ListTileWidget(
+                                leftHeader: 'PRESSURE',
+                                rightHeader: 'HUMIDITY',
+                                leftData: '$locationPressure hPa',
+                                rightData: '$locationHumidity%'),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(color: Colors.white24),
+                                bottom: BorderSide(color: Colors.white24),
+                              ),
+                            ),
+                            child: ListTileWidget(
+                                leftHeader: 'WIND',
+                                rightHeader: 'FEELS LIKE',
+                                leftData: '$locationWind mPh',
+                                rightData: '$locationFeelsLike°'),
                           ),
                         ],
                       ),
+                    ]),
+              ),
+              bottomNavigationBar: BottomNavigationBar(
+                  selectedIconTheme: IconThemeData(color: Colors.white),
+                  unselectedIconTheme: IconThemeData(color: Colors.white),
+                  elevation: 20.0,
+                  backgroundColor: Colors.transparent,
+                  items: const <BottomNavigationBarItem>[
+                    // IconButton(
+                    //   icon: Icon(Icons.near_me),
+                    //   tooltip: 'Get location',
+                    //   onPressed: () async {
+                    //     var weatherDataCall =
+                    //         await weatherDataModel.getLocationWeatherAPI();
+                    //     updateUI(weatherDataCall);
+                    //   },
+                    // ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.near_me),
+                      label: '',
                     ),
-                    SliverGrid.count(
-                      crossAxisCount: 1,
-                      childAspectRatio: 5.0,
-                      children: [
-                        ListTile(
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Opacity(
-                                opacity: 0.50,
-                                child: Text(
-                                  'AIR QUALITY',
-                                  style: transTextStyle,
-                                ),
-                              ),
-                              Opacity(
-                                opacity: 0.50,
-                                child: Text(
-                                  'AQI ($locationCountry)',
-                                  style: transTextStyle,
-                                ),
-                              ),
-                            ],
-                          ),
-                          subtitle: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                '$locationWindDeg - ${airQuality(locationWindDeg)}',
-                                style: iPhoneTextStyle1,
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Container(
-                                  child: SliderTheme(
-                                    data: SliderTheme.of(context).copyWith(
-                                      thumbColor: Colors.white,
-                                      activeTrackColor: Colors.transparent,
-                                      thumbShape: RoundSliderThumbShape(
-                                        enabledThumbRadius: 8.0,
-                                      ),
-                                    ),
-                                    child: Slider.adaptive(
-                                        value: locationWindDeg.toDouble(),
-                                        min: 0.0,
-                                        max: 360.0,
-                                        onChanged: (double windDeg1) {
-                                          setState(() {
-                                            print('$locationWindDeg');
-                                          });
-                                        }),
-                                  ),
-                                  height: 8.0,
-                                  decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.all(
-                                          Radius.circular(8.0)),
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topRight,
-                                        end: Alignment.bottomLeft,
-                                        stops: [
-                                          0.1,
-                                          0.4,
-                                          0.5,
-                                          0.9,
-                                        ],
-                                        colors: [
-                                          Colors.deepPurple,
-                                          Colors.red,
-                                          Colors.yellow,
-                                          Colors.green,
-                                        ],
-                                      )),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        ListTile(
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Opacity(
-                                opacity: 0.50,
-                                child: Text(
-                                  'SUNRISE',
-                                  style: transTextStyle,
-                                ),
-                              ),
-                              Opacity(
-                                opacity: 0.50,
-                                child: Text(
-                                  'SUNSET',
-                                  style: transTextStyle,
-                                ),
-                              ),
-                            ],
-                          ),
-                          subtitle: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                locationSunrise,
-                                style: transTextStyle1,
-                              ),
-                              Text(
-                                locationSunset,
-                                style: transTextStyle1,
-                              ),
-                            ],
-                          ),
-                        ),
-                        ListTile(
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Opacity(
-                                opacity: 0.50,
-                                child: Text(
-                                  'PRESSURE',
-                                  style: transTextStyle,
-                                ),
-                              ),
-                              Opacity(
-                                opacity: 0.50,
-                                child: Text(
-                                  'HUMIDITY',
-                                  style: transTextStyle,
-                                ),
-                              ),
-                            ],
-                          ),
-                          subtitle: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '$locationPressure hPa',
-                                style: transTextStyle1,
-                              ),
-                              Text(
-                                '$locationHumidity%',
-                                style: transTextStyle1,
-                              ),
-                            ],
-                          ),
-                        ),
-                        ListTile(
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Opacity(
-                                opacity: 0.50,
-                                child: Text(
-                                  'WIND',
-                                  style: transTextStyle,
-                                ),
-                              ),
-                              Opacity(
-                                opacity: 0.50,
-                                child: Text(
-                                  'FEELS LIKE',
-                                  style: transTextStyle,
-                                ),
-                              ),
-                            ],
-                          ),
-                          subtitle: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '$locationWind mPh',
-                                style: transTextStyle1,
-                              ),
-                              Text(
-                                '$locationFeelsLike°',
-                                style: transTextStyle1,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.menu),
+                      label: '',
                     ),
                   ]),
-            )));
+            ),
+          ),
+        )
+      ],
+    );
   }
 }
 
-class DayForecast {
-  final String dayName;
-  final String iconImage;
-  final String maxTemp;
-  final String minTemp;
+class ListTileWidget extends StatelessWidget {
+  final String leftHeader;
+  final String rightHeader;
+  final String leftData;
+  final String rightData;
+  ListTileWidget(
+      {this.leftHeader, this.rightHeader, this.leftData, this.rightData});
 
-  DayForecast(this.dayName, this.iconImage, this.maxTemp, this.minTemp);
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Opacity(
+              opacity: 0.50,
+              child: Text(
+                leftHeader,
+                style: transTextStyle,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Opacity(
+              opacity: 0.50,
+              child: Text(
+                rightHeader,
+                style: transTextStyle,
+              ),
+            ),
+          ),
+        ],
+      ),
+      subtitle: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              leftData,
+              style: transTextStyle1,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              rightData,
+              style: transTextStyle1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-  // Image.network(
-  // imageUrl,
-  // key: _backgroundImageKey,
-  // fit: BoxFit.cover,
-  // ),
+class Delegate extends SliverPersistentHeaderDelegate {
+  final dynamic hoursList;
+  final dynamic hourlyIconList;
+  final dynamic hourlyTempList;
+  final Widget delegateChild;
+
+  Delegate({
+    this.hoursList,
+    this.hourlyIconList,
+    this.hourlyTempList,
+    this.delegateChild,
+  });
+
+  @override
+  Widget build(
+          BuildContext context, double shrinkOffset, bool overlapsContent) =>
+      Container(
+        child: delegateChild,
+      );
+
+  @override
+  double get maxExtent => 120;
+
+  @override
+  double get minExtent => 120;
+
+  @override
+  bool shouldRebuild(SliverPersistentHeaderDelegate oldDelegate) => true;
 }
 
 //TODO: Random city name
-//TODO: High, Medium, Normal via enum to airquality
-//TODO: Slider via colors for airquality
-// Container(
-// child: Column(
-// children: [
-// Padding(
-// padding: const EdgeInsets.all(8.0),
-// child: Column(
-// crossAxisAlignment: CrossAxisAlignment.stretch,
-// mainAxisAlignment: MainAxisAlignment.center,
-// children: [
-// DividerWidget(),
-// Text(
-// 'Today: $description. It\'s $convertedMainTemperature°; the high today is forecast as $convertedMaxTemperature°.',
-// maxLines: 2,
-// softWrap: true,
-// style: iPhoneTextStyle,
-// ),
-// ],
-// ),
-// ),
-// Padding(
-// padding: const EdgeInsets.all(8.0),
-// child: Column(
-// mainAxisAlignment: MainAxisAlignment.spaceAround,
-// children: [
-// Divider(
-// color: Colors.white24,
-// thickness: 1.0,
-// ),
-// Row(
-// mainAxisAlignment: MainAxisAlignment.spaceBetween,
-// children: [
-// Opacity(
-// opacity: 0.50,
-// child: Text(
-// 'AIR QUALITY',
-// style: transTextStyle,
-// ),
-// ),
-// Opacity(
-// opacity: 0.50,
-// child: Text(
-// 'AQI ($country)',
-// style: transTextStyle,
-// ),
-// ),
-// ],
-// ),
-// Padding(
-// padding: const EdgeInsets.all(8.0),
-// child: Row(
-// mainAxisAlignment: MainAxisAlignment.start,
-// children: [
-// Text(
-// '$windDeg - ${airQuality(windDeg)}',
-// style: iPhoneTextStyle1,
-// )
-// ],
-// ),
-// ),
-// Container(
-// child: SliderTheme(
-// data: SliderTheme.of(context).copyWith(
-// thumbColor: Colors.white,
-// activeTrackColor: Colors.white10,
-// thumbShape: RoundSliderThumbShape(
-// enabledThumbRadius: 8.0,
-// ),
-// ),
-// child: Slider.adaptive(
-// value: windDeg.toDouble(),
-// min: 0.0,
-// max: 360.0,
-// onChanged: (double windDeg1) {
-// setState(() {
-// print('$windDeg');
-// });
-// }),
-// ),
-// height: 8.0,
-// decoration: BoxDecoration(
-// borderRadius:
-// BorderRadius.all(Radius.circular(8.0)),
-// gradient: LinearGradient(
-// begin: Alignment.topRight,
-// end: Alignment.bottomLeft,
-// stops: [
-// 0.1,
-// 0.4,
-// 0.5,
-// 0.9,
-// ],
-// colors: [
-// Colors.deepPurple,
-// Colors.red,
-// Colors.yellow,
-// Colors.green,
-// ],
-// )),
-// )
-// ],
-// ),
-// ),
-// ExtraDataWidget(
-// apitDataLeft: sunrise,
-// apiDataRight: sunset,
-// titleLeft: 'SUNRISE',
-// titleRight: 'SUNSET',
-// ),
-// ExtraDataWidget(
-// apitDataLeft: '$pressure hPa',
-// apiDataRight: '$humidity%',
-// titleLeft: 'PRESSURE',
-// titleRight: 'HUMIDITY',
-// ),
-// ExtraDataWidget(
-// apitDataLeft: '$wind mPh',
-// apiDataRight: '$feelsLike°',
-// titleLeft: 'WIND',
-// titleRight: 'FEELS LIKE',
-// ),
-// ],
-// ),
-// ),
-
-// Column(
-// children: [
-// Container(
-// height: 50,
-// child: ForecastWidget(
-// convertedForecastDate: weekDays[index],
-// iconStamp: iconCodes[index],
-// convertedTempAPI: temeratures[index]),
-// ),
-// ],
-// );
-
-// return Scaffold(
-// body: Container(
-// decoration: BoxDecoration(
-// image: DecorationImage(
-// image: AssetImage(
-// backgroundUI.backgroundImage,
-// ),
-// fit: BoxFit.cover,
-// colorFilter: ColorFilter.mode(
-// Colors.white.withOpacity(0.8),
-// BlendMode.dstATop,
-// ),
-// ),
-// ),
-// constraints: BoxConstraints.expand(),
-// child: SafeArea(
-// child: Column(
-// crossAxisAlignment: CrossAxisAlignment.stretch,
-// children: [
-// Padding(
-// padding: EdgeInsets.all(30.0),
-// child: Column(
-// children: [
-// Text(
-// '$cityName',
-// style: iPhoneTitleStyle,
-// ),
-// Text(
-// '$conditionMainMessage',
-// style: iPhoneTextStyle,
-// ),
-// Text(
-// '$convertedMainTemperature°',
-// style: iPhoneTempStyle,
-// ),
-// Text(
-// 'H:$convertedMaxTemperature°  L:$convertedMinTemperature°',
-// style: iPhoneTextStyle,
-// ),
-// ],
-// ),
-// ),
-// DividerWidget(),
-// Column(
-// children: [
-// // ListView.builder(
-// //   padding: const EdgeInsets.all(8),
-// //   scrollDirection: Axis.horizontal,
-// //   itemCount: weekDays.length,
-// //   itemBuilder: (BuildContext context, int index) {
-// //     return Column(
-// //       children: [
-// //         Container(
-// //           height: 50,
-// //           child: HourlyWidget(
-// //               time: weekDays[index],
-// //               iconStamp: iconCodes[index],
-// //               convertedTempAPI: temeratures[index]),
-// //         ),
-// //       ],
-// //     );
-// //   },
-// // ),
-// DividerWidget(),
-// // Expanded(
-// //   // flex: 2,
-// //   child: ListView.builder(
-// //     padding: const EdgeInsets.all(8),
-// //     scrollDirection: Axis.vertical,
-// //     itemCount: weekDays.length,
-// //     itemBuilder: (BuildContext context, int index) {
-// //       return Column(
-// //         children: [
-// //           Container(
-// //             height: 50,
-// //             child: ForecastWidget(
-// //                 convertedForecastDate: weekDays[index],
-// //                 iconStamp: iconCodes[index],
-// //                 convertedTempAPI: temeratures[index]),
-// //           ),
-// //         ],
-// //       );
-// //     },
-// //   ),
-// // ),
-// DividerWidget(),
-// Row(
-// mainAxisAlignment: MainAxisAlignment.spaceBetween,
-// children: <Widget>[
-// TextButton(
-// onPressed: () {
-// Navigator.push(
-// context,
-// MaterialPageRoute(
-// builder: (context) => LoadingScreen()),
-// );
-// },
-// child: Icon(
-// Icons.info,
-// size: 20.0,
-// color: Colors.white,
-// ),
-// ),
-// TextButton(
-// onPressed: () {
-// Navigator.push(
-// context,
-// MaterialPageRoute(
-// builder: (context) => CatsScreen()),
-// );
-// },
-// child: Icon(
-// Icons.list,
-// size: 20.0,
-// color: Colors.white,
-// ),
-// ),
-// ],
-// ),
-// ],
-// )
-// ]),
-// )));
-
-List<dynamic> temps = [];
-// final Size screenSize = MediaQuery.of(context).size;
-// final List<String> weekDays = <String>[
-//   'Monday',
-//   'Tuesday',
-//   'Wednesday',
-//   'Thursday',
-//   'Friday',
-//   'Saturday',
-//   'Sunday'
-// ];
