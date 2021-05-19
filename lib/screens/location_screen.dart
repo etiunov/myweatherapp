@@ -179,6 +179,7 @@ class _IphoneScreenState extends State<IphoneScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final Size size = MediaQuery.of(context).size;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -206,6 +207,7 @@ class _IphoneScreenState extends State<IphoneScreen> {
                       //   child: Center(child: CircularProgressIndicator()),
                       // ),
                       SliverAppBar(
+                        elevation: 0,
                         stretch: true,
                         onStretchTrigger: () {
                           // Function callback for stretch
@@ -647,7 +649,7 @@ class _IphoneScreenState extends State<IphoneScreen> {
               bottomNavigationBar: BottomNavigationBar(
                   selectedIconTheme: IconThemeData(color: Colors.white),
                   unselectedIconTheme: IconThemeData(color: Colors.white),
-                  elevation: 20.0,
+                  elevation: 0.0,
                   backgroundColor: Colors.transparent,
                   items: const <BottomNavigationBarItem>[
                     // IconButton(
