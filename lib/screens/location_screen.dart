@@ -373,6 +373,7 @@ class _IphoneScreenState extends State<IphoneScreen> {
                       //   ),
                       // ),
                       SliverList(
+                        //https://www.youtube.com/watch?v=Cn6VCTaHB-k&ab_channel=RetroPortalStudio
                         delegate: SliverChildListDelegate([
                           Container(
                             child: Padding(
