@@ -1,19 +1,20 @@
 import 'dart:ui';
-
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:core';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:myiphoneweather/utilities/location-api.dart';
-import 'package:myiphoneweather/utilities/timer.dart';
 import 'package:myiphoneweather/utilities/constrants.dart';
 import 'package:myiphoneweather/utilities/background.dart';
-import 'package:myiphoneweather/screens/cats_sceen.dart';
-import 'package:myiphoneweather/utilities/extracted_widgets.dart';
-import 'package:rflutter_alert/rflutter_alert.dart';
-import 'package:myiphoneweather/utilities/alert_dialog.dart';
-import 'package:transparent_image/transparent_image.dart';
+import 'package:myiphoneweather/screens/city_screen.dart';
+
+enum OpacityLevel {
+  active,
+  inactive,
+}
 
 class IphoneScreen extends StatefulWidget {
   final locationWeather;
@@ -33,17 +34,21 @@ class IphoneScreen extends StatefulWidget {
 class _IphoneScreenState extends State<IphoneScreen> {
   WeatherDataModel weatherDataModel = WeatherDataModel();
   WeatherForecast weatherForecast = WeatherForecast();
-  TimeCounter timeCounter = TimeCounter();
   BackgroundUI backgroundUI = BackgroundUI();
 
-  List<dynamic> hoursList = List(12);
-  List<dynamic> weekDayList = List(7);
-  List<String> temperatureList = [];
-  List<String> dailyIconList = List(7);
-  var minTemperatureList = List(7);
-  var maxTemperatureList = List(7);
-  List<String> hourlyIconList = List(12);
-  var hourlyTempList = List(12);
+  ScrollController controller = ScrollController();
+  bool closeThisContainer = false;
+  double topListItem = 0;
+  bool isVisible = true;
+  bool isTransparent = false;
+
+  List<dynamic> hoursList = List(12),
+      weekDayList = List(7),
+      dailyIconList = List(7),
+      minTemperatureList = List(7),
+      maxTemperatureList = List(7),
+      hourlyIconList = List(12),
+      hourlyTempList = List(12);
 
   var cityTemp,
       cityName,
@@ -67,7 +72,13 @@ class _IphoneScreenState extends State<IphoneScreen> {
       locationWindDeg,
       locationCountry,
       typedCityName,
-      airPollutionIndex;
+      airPollutionIndex,
+      chanceOfRain,
+      precipitation,
+      visibility,
+      uvIndex;
+  double opacityLevel = 1.0;
+  Opacity selectedOpacity;
 
   @override
   void initState() {
@@ -77,7 +88,16 @@ class _IphoneScreenState extends State<IphoneScreen> {
     loadForecast(widget.forecastWeather);
     airPollutionUI(widget.airPollution);
     dayOfWeek();
+    loadIndexes(widget.forecastWeather);
     timeNow();
+    _changeOpacity();
+    controller.addListener(() {
+      double value = controller.offset / 100;
+      setState(() {
+        topListItem = value;
+        closeThisContainer = controller.offset > 50;
+      });
+    });
   }
 
   //Hours list for horizontal scroll
@@ -137,8 +157,6 @@ class _IphoneScreenState extends State<IphoneScreen> {
     setState(() {
       airPollutionIndex = pollutionData["list"][0]["main"]["aqi"];
     });
-
-    print(airPollutionIndex);
   }
 
   //Air quality bar
@@ -156,6 +174,19 @@ class _IphoneScreenState extends State<IphoneScreen> {
     }
   }
 
+  //Load additional indexes
+  Future<void> loadIndexes(dynamic weatherForecast) async {
+    setState(() {
+      precipitation = weatherForecast["minutely"][0]["precipitation"];
+      var visibilityConv = weatherForecast["current"]["visibility"].toInt();
+      visibility = (visibilityConv / 1000).toInt();
+      uvIndex = weatherForecast["current"]["uvi"].toInt();
+      var confidenceForecast = 0.5;
+      chanceOfRain = (precipitation.toInt() * confidenceForecast).toInt();
+    });
+  }
+
+  //Forecast for next 7 days and 12 hours
   Future<void> loadForecast(dynamic weatherForecast) async {
     for (var i = 0; i < 7; i++) {
       var icon = weatherForecast["daily"][i]["weather"][0]["icon"];
@@ -177,223 +208,87 @@ class _IphoneScreenState extends State<IphoneScreen> {
     }
   }
 
+  void _changeOpacity() {
+    setState(() {
+      // if (opacityLevel == 1.0) {
+      //   opacityLevel = 0.5;
+      // } else {
+      //   opacityLevel = 1.0;
+      // }
+      opacityLevel == 1.0 ? opacityLevel = 0.5 : opacityLevel = 1.0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
+
     return Stack(
       fit: StackFit.expand,
       children: [
         Center(child: CircularProgressIndicator()),
         Container(
+          // color: Colors.black12,
           child: Image.asset(
             backgroundUI.backgroundImage,
             fit: BoxFit.cover,
           ),
           //TODO Add random city
-          // Image.network(
-          //   'https://loving-newyork.com/wp-content/uploads/2018/09/Empire-State-Building-New-York_160914155540010-e1537863672134.jpg'),
+          // child: Image.network(
+          //   'https://loving-newyork.com/wp-content/uploads/2018/09/Empire-State-Building-New-York_160914155540010-e1537863672134.jpg',
+          //   fit: BoxFit.cover,
+          // ),
         ),
         Positioned.fill(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
             child: Scaffold(
-              backgroundColor: Colors.black12,
+              appBar: AppBar(
+                toolbarHeight: 100.0,
+                leading: IconButton(
+                  icon: Icon(Icons.near_me),
+                  color: Colors.transparent,
+                  onPressed: () {},
+                ),
+                shadowColor: Colors.transparent,
+                backgroundColor: Colors.transparent,
+                title: Column(
+                  children: [
+                    Text(
+                      '$locationCityName' ?? '--',
+                      style: iPhoneTitleStyle,
+                    ),
+                    Text(
+                      '$locationConditionMessage',
+                      style: iPhoneTextStyle1,
+                    ),
+                  ],
+                ),
+                centerTitle: true,
+              ),
+              // backgroundColor: Colors.transparent,
               body: SafeArea(
                 child: CustomScrollView(
                     physics: const BouncingScrollPhysics(
                         parent: AlwaysScrollableScrollPhysics()),
                     slivers: [
-                      // SliverToBoxAdapter(
-                      //   child: Center(child: CircularProgressIndicator()),
-                      // ),
-                      SliverAppBar(
-                        elevation: 0,
-                        stretch: true,
-                        onStretchTrigger: () {
-                          // Function callback for stretch
-                          return Future<void>.value();
-                        },
-                        pinned: true,
-                        primary: true,
-                        backgroundColor: Colors.transparent,
-                        expandedHeight: 120.0,
-                        flexibleSpace: Center(
-                          child: FlexibleSpaceBar(
-                            collapseMode: CollapseMode.parallax,
-                            background: Container(
-                              color: Colors.transparent,
-                            ),
-                            stretchModes: const <StretchMode>[
-                              StretchMode.zoomBackground,
-                              StretchMode.blurBackground,
-                              StretchMode.fadeTitle,
-                            ],
-                            // background: Stack(
-                            //   fit: StackFit.expand,
-                            //   children: [
-                            //     // Image.asset(
-                            //     //   backgroundUI.backgroundImage,
-                            //     //   fit: BoxFit.cover,
-                            //     // ),
-                            //     Positioned.fill(
-                            //       child: BackdropFilter(
-                            //         filter: ImageFilter.blur(
-                            //             sigmaX: 3.0, sigmaY: 3.0),
-                            //       ),
-                            //     ),
-                            //   ],
-                            // ),
-                            // background: Image(
-                            //   image:
-                            //   AssetImage(
-                            //     backgroundUI.backgroundImage,
-                            //   ),
-                            //   fit: BoxFit.fitWidth,
-                            //   alignment: Alignment.topCenter,
-                            // ),
-                            // background: Stack(
-                            //   fit: StackFit.expand,
-                            //   children: [
-                            //     Image.network(
-                            //       'https://flutter.github.io/assets-for-api-docs/assets/widgets/owl-2.jpg',
-                            //       fit: BoxFit.cover,
-                            //     ),
-                            //     DecoratedBox(
-                            //       decoration: BoxDecoration(
-                            //         gradient: LinearGradient(
-                            //           begin: Alignment(0.0, 0.5),
-                            //           end: Alignment(0.0, 0.0),
-                            //           colors: <Color>[
-                            //             Color(0x60000000),
-                            //             Color(0x00000000),
-                            //           ],
-                            //         ),
-                            //       ),
-                            //     ),
-                            //   ],
-                            // ),
-                            title: Text(
-                              '$locationCityName' ?? '--',
-                              style: iPhoneTitleStyle,
-                            ),
-                            centerTitle: true,
-                          ),
-                        ),
-                        backwardsCompatibility: false,
-                        shadowColor: Colors.transparent,
-                        leading: IconButton(
-                          icon: Icon(Icons.near_me),
-                          tooltip: 'Get location',
-                          onPressed: () async {
-                            var weatherDataCall =
-                                await weatherDataModel.getLocationWeatherAPI();
-                            updateUI(weatherDataCall);
-                          },
-                        ),
-                        actions: [
-                          IconButton(
-                            icon: Icon(Icons.add),
-                            tooltip: 'Add city',
-                            onPressed: () async {
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(10.0)),
-                                    title: Text('Enter city name'),
-                                    content: TextField(
-                                      onSubmitted: (value) async {
-                                        typedCityName = value;
-                                        Navigator.pop(context);
-                                        if (typedCityName != null) {
-                                          var weatherData =
-                                              await weatherDataModel
-                                                  .getCityWeatherAPI(
-                                                      typedCityName);
-                                          updateUI(weatherData);
-                                        }
-                                        print(typedCityName);
-                                      },
-                                    ),
-                                    actions: [
-                                      OutlinedButton(
-                                        onPressed: () async {
-                                          Navigator.pop(context);
-                                        },
-                                        child: Text('Cancel'),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () async {
-                                          Navigator.pop(context, typedCityName);
-                                          if (typedCityName != null) {
-                                            var weatherData =
-                                                await weatherDataModel
-                                                    .getCityWeatherAPI(
-                                                        typedCityName);
-                                            updateUI(weatherData);
-                                          }
-                                          print(typedCityName);
-                                        },
-                                        child: Text('Next'),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      // SliverToBoxAdapter(
-                      //   child: SizedBox(
-                      //     height: 1000,
-                      //     child: Placeholder(),
-                      //   ),
-                      // ),
-                      // SliverPersistentHeader(
-                      //   pinned: true,
-                      //   floating: false,
-                      //   delegate: Delegate(
-                      //     delegateChild: Center(
-                      //       child: Column(
-                      //           mainAxisAlignment: MainAxisAlignment.center,
-                      //           children: [
-                      //             Text(
-                      //               '$locationCityName' ?? '--',
-                      //               style: iPhoneTitleStyle,
-                      //             ),
-                      //             Text(
-                      //               '$locationConditionMessage',
-                      //               style: iPhoneTextStyle1,
-                      //             ),
-                      //           ]),
-                      //     ),
-                      //   ),
-                      // ),
                       SliverList(
-                        //https://www.youtube.com/watch?v=Cn6VCTaHB-k&ab_channel=RetroPortalStudio
                         delegate: SliverChildListDelegate([
                           Container(
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 18.0),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    '$locationConditionMessage',
-                                    style: iPhoneTextStyle1,
-                                  ),
-                                  Text(
-                                    '$locationMainTemperature°',
-                                    style: kConditionTextStyle,
-                                  ),
-                                  Text(
-                                    'H:$locationMaxTemperature° L:$locationMinTemperature°',
-                                    style: iPhoneTextStyle,
-                                  ),
-                                ],
-                              ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  '$locationMainTemperature°',
+                                  style: kConditionTextStyle,
+                                ),
+                                Text(
+                                  'H:$locationMaxTemperature° L:$locationMinTemperature°',
+                                  style: iPhoneTextStyle,
+                                ),
+                                const SizedBox(
+                                  height: 40.0,
+                                )
+                              ],
                             ),
                           ),
                         ]),
@@ -406,13 +301,9 @@ class _IphoneScreenState extends State<IphoneScreen> {
                           hourlyIconList: hourlyIconList,
                           hourlyTempList: hourlyTempList,
                           delegateChild: Container(
-                            decoration: BoxDecoration(
-                              border: Border(
-                                top: BorderSide(color: Colors.white24),
-                                bottom: BorderSide(color: Colors.white24),
-                              ),
-                            ),
+                            decoration: dividerDoubleLine,
                             child: ListView.builder(
+                                physics: BouncingScrollPhysics(),
                                 scrollDirection: Axis.horizontal,
                                 padding: const EdgeInsets.all(8.0),
                                 itemCount: hoursList.length,
@@ -455,7 +346,8 @@ class _IphoneScreenState extends State<IphoneScreen> {
                         crossAxisCount: 1,
                         children: [
                           ListView.builder(
-                              // padding: const EdgeInsets.all(8),
+                              controller: controller,
+                              physics: BouncingScrollPhysics(),
                               itemCount: weekDayList.length,
                               itemBuilder: (BuildContext context, int index) {
                                 return Padding(
@@ -508,11 +400,7 @@ class _IphoneScreenState extends State<IphoneScreen> {
                         childAspectRatio: 5.0,
                         children: [
                           Container(
-                            decoration: BoxDecoration(
-                              border: Border(
-                                top: BorderSide(color: Colors.white24),
-                              ),
-                            ),
+                            decoration: dividerLine,
                             child: ListTile(
                               title: Text(
                                 'Today: $locationDescription. It\'s $locationMainTemperature°; the high today is forecast as $locationMaxTemperature°.',
@@ -523,11 +411,7 @@ class _IphoneScreenState extends State<IphoneScreen> {
                             ),
                           ),
                           Container(
-                            decoration: BoxDecoration(
-                              border: Border(
-                                top: BorderSide(color: Colors.white24),
-                              ),
-                            ),
+                            decoration: dividerLine,
                             child: ListTile(
                               title: Row(
                                 mainAxisAlignment:
@@ -574,7 +458,7 @@ class _IphoneScreenState extends State<IphoneScreen> {
                                             max: 5.0,
                                             onChanged: (double windDeg1) {
                                               setState(() {
-                                                print('$airPollutionIndex');
+                                                // print('$airPollutionIndex');
                                               });
                                             }),
                                       ),
@@ -586,14 +470,14 @@ class _IphoneScreenState extends State<IphoneScreen> {
                                             begin: Alignment.topRight,
                                             end: Alignment.bottomLeft,
                                             stops: [
-                                              0.3,
+                                              0.2,
                                               0.4,
                                               0.7,
                                               0.8,
                                               0.9,
                                             ],
                                             colors: [
-                                              Colors.brown,
+                                              Colors.blueGrey,
                                               Colors.deepPurple,
                                               Colors.red,
                                               Colors.yellow,
@@ -607,11 +491,7 @@ class _IphoneScreenState extends State<IphoneScreen> {
                             ),
                           ),
                           Container(
-                            decoration: BoxDecoration(
-                              border: Border(
-                                top: BorderSide(color: Colors.white24),
-                              ),
-                            ),
+                            decoration: dividerLine,
                             child: ListTileWidget(
                                 leftHeader: 'SUNRISE',
                                 rightHeader: 'SUNSET',
@@ -619,58 +499,148 @@ class _IphoneScreenState extends State<IphoneScreen> {
                                 rightData: locationSunset),
                           ),
                           Container(
-                            decoration: BoxDecoration(
-                              border: Border(
-                                top: BorderSide(color: Colors.white24),
-                              ),
-                            ),
+                            decoration: dividerLine,
                             child: ListTileWidget(
-                                leftHeader: 'PRESSURE',
+                                leftHeader: 'CHANCE OF RAIN',
                                 rightHeader: 'HUMIDITY',
-                                leftData: '$locationPressure hPa',
+                                leftData: '$chanceOfRain %',
                                 rightData: '$locationHumidity%'),
                           ),
                           Container(
-                            decoration: BoxDecoration(
-                              border: Border(
-                                top: BorderSide(color: Colors.white24),
-                                bottom: BorderSide(color: Colors.white24),
-                              ),
-                            ),
+                            decoration: dividerLine,
                             child: ListTileWidget(
                                 leftHeader: 'WIND',
                                 rightHeader: 'FEELS LIKE',
                                 leftData: '$locationWind mPh',
                                 rightData: '$locationFeelsLike°'),
                           ),
+                          Container(
+                            decoration: dividerLine,
+                            child: ListTileWidget(
+                                leftHeader: 'PRECIPITATION',
+                                rightHeader: 'PRESSURE',
+                                leftData: '$precipitation in',
+                                rightData: '$locationPressure inHg'),
+                          ),
+                          Container(
+                            decoration: dividerLine,
+                            child: ListTileWidget(
+                                leftHeader: 'VISIBILITY',
+                                rightHeader: 'UV INDEX',
+                                leftData: '$visibility mi',
+                                rightData: '$uvIndex'),
+                          ),
+                          Container(
+                            decoration: dividerLine,
+                            child: ListTile(
+                              title: RichText(
+                                  text: TextSpan(
+                                      style: transTextStyle,
+                                      children: [
+                                    TextSpan(
+                                        text:
+                                            'Weather for $locationCityName city. '),
+                                    TextSpan(
+                                        style: TextStyle(
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                        text: "Open in Maps.",
+                                        recognizer: TapGestureRecognizer()
+                                          ..onTap = () async {
+                                            var url = "https://www.youtube.com";
+                                            if (await canLaunch(url)) {
+                                              await launch(url);
+                                            } else {
+                                              throw 'Could not launch $url';
+                                            }
+                                          }),
+                                  ])),
+                            ),
+                          ),
                         ],
                       ),
                     ]),
               ),
-              bottomNavigationBar: BottomNavigationBar(
-                  selectedIconTheme: IconThemeData(color: Colors.white),
-                  unselectedIconTheme: IconThemeData(color: Colors.white),
-                  elevation: 0.0,
-                  backgroundColor: Colors.transparent,
-                  items: const <BottomNavigationBarItem>[
-                    // IconButton(
-                    //   icon: Icon(Icons.near_me),
-                    //   tooltip: 'Get location',
-                    //   onPressed: () async {
-                    //     var weatherDataCall =
-                    //         await weatherDataModel.getLocationWeatherAPI();
-                    //     updateUI(weatherDataCall);
-                    //   },
-                    // ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.near_me),
-                      label: '',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.menu),
-                      label: '',
-                    ),
-                  ]),
+              bottomNavigationBar: BottomAppBar(
+                color: Colors.transparent,
+                child: Container(
+                  decoration: dividerLine,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.article_sharp),
+                        tooltip: 'Info',
+                        onPressed: () async {
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.0)),
+                                title: Text('Weather Info'),
+                                content: Text(
+                                    'Weather Me° (NonCommercial) is my attempt to repeat The iPhone Weather Channel App to cover the Section 13: Clima - Powering Your Flutter App with Live Web Data of the Complete Flutter App Development Bootcamp with Dart.'),
+                                actions: [
+                                  OutlinedButton(
+                                    onPressed: () async {
+                                      Navigator.pop(context);
+                                    },
+                                    child: Text('Close'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                      ),
+                      Spacer(),
+                      IconButton(
+                        iconSize: 18.0,
+                        icon: Icon(Icons.near_me),
+                        tooltip: 'Get location',
+                        onPressed: () async {
+                          var weatherDataCall =
+                              await weatherDataModel.getLocationWeatherAPI();
+                          updateUI(weatherDataCall);
+                        },
+                      ),
+                      AnimatedOpacity(
+                        duration: const Duration(microseconds: 10),
+                        child: IconButton(
+                          iconSize: 12.0,
+                          icon: Icon(Icons.circle),
+                          onPressed: () {
+                            _changeOpacity();
+                          },
+                        ),
+                        opacity: opacityLevel,
+                      ),
+                      Spacer(),
+                      IconButton(
+                        icon: Icon(Icons.menu),
+                        onPressed: () async {
+                          var weatherData =
+                              await WeatherDataModel().getLocationWeatherAPI();
+                          var typedCityName = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) {
+                                return CityScreen(locationWeather: weatherData);
+                              },
+                            ),
+                          );
+                          if (typedCityName != null) {
+                            var weatherData = await weatherDataModel
+                                .getCityWeatherAPI(typedCityName);
+                            updateUI(weatherData);
+                          }
+                          print(typedCityName);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         )
@@ -751,6 +721,7 @@ class Delegate extends SliverPersistentHeaderDelegate {
   Widget build(
           BuildContext context, double shrinkOffset, bool overlapsContent) =>
       Container(
+        color: Colors.grey[850],
         child: delegateChild,
       );
 
@@ -763,5 +734,3 @@ class Delegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(SliverPersistentHeaderDelegate oldDelegate) => true;
 }
-
-//TODO: Random city name

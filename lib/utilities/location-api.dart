@@ -82,6 +82,7 @@ class WeatherForecast {
     NetworkHelper networkHelper = NetworkHelper(
         "$forecastWeatherMapURL?lat=${locationGeopositionData.latitude}&lon=${locationGeopositionData.longitude}&APPID=$apiKey&units=imperial");
     var weatherForecast = await networkHelper.getData();
+    // print(weatherForecast);
     return weatherForecast;
   }
 }

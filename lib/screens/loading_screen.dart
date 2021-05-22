@@ -55,35 +55,39 @@ class _LoadingScreenState extends State<LoadingScreen> {
           children: [
             CircleAvatar(
               radius: 100.0,
-              backgroundColor: Colors.white,
-              child: Container(
-                decoration: BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.redAccent,
-                          blurRadius: 4.0,
-                          spreadRadius: 2.0)
-                    ],
-                    shape: BoxShape.circle,
-                    // borderRadius: BorderRadius.all(Radius.circular(100.0)),
-                    gradient: LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [Colors.purple, Colors.red])),
-                alignment: Alignment.center,
-                child: Text(
-                  'Weather Me°',
-                  style: TextStyle(
-                      fontSize: 30,
-                      fontFamily: 'Source Sans Pro',
-                      color: Colors.white),
-                ),
+              // backgroundColor: Colors.white,
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('images/images.gif'),
+                        fit: BoxFit.cover,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.grey,
+                            blurRadius: 10.0,
+                            spreadRadius: 16.0)
+                      ],
+                      shape: BoxShape.circle,
+                      // gradient: LinearGradient(
+                      //     begin: Alignment.centerLeft,
+                      //     end: Alignment.centerRight,
+                      //     colors: [Colors.purple, Colors.red]),
+                    ),
+                    alignment: Alignment.center,
+                    // child: Text(
+                    //   'Weather Me°',
+                    //   style: TextStyle(
+                    //       fontSize: 30,
+                    //       fontFamily: 'Source Sans Pro',
+                    //       color: Colors.white),
+                    // ),
+                  ),
+                ],
               ),
-            ), //To display loading spinner
-            // SpinKitDoubleBounce(
-            //   color: Colors.white,
-            //   size: 100.0,
-            // ),
+            ),
           ],
         ),
       ),

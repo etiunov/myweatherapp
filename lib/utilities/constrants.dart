@@ -1,5 +1,18 @@
 import 'package:flutter/material.dart';
 
+const dividerLine = BoxDecoration(
+  border: Border(
+    top: BorderSide(color: Colors.white24),
+  ),
+);
+
+const dividerDoubleLine = BoxDecoration(
+  border: Border(
+    top: BorderSide(color: Colors.white24),
+    bottom: BorderSide(color: Colors.white24),
+  ),
+);
+
 const kTempTextStyle = TextStyle(
   fontFamily: 'Spartan MB',
   fontSize: 100.0,
@@ -21,15 +34,17 @@ const kConditionTextStyle = TextStyle(
 
 const iPhoneTitleStyle = TextStyle(
   fontWeight: FontWeight.w400,
-  fontSize: 24.0,
+  fontSize: 34.0,
   fontFamily: 'Roboto',
   // fontWeight: FontWeight.w400,
 );
+
 const iPhoneTextStyle1 = TextStyle(
   fontWeight: FontWeight.w300,
-  fontSize: 16.0,
+  fontSize: 20.0,
   // fontFamily: 'Roboto',
 );
+
 const transTextStyle = TextStyle(
   fontSize: 16.0,
   // fontFamily: 'Roboto',
@@ -74,7 +89,3 @@ const textFieldStyle = InputDecoration(
     borderSide: BorderSide.none,
   ),
 );
-
-const String apiKey = '1ae7e5e12a8acea4a69085bbe0e73e6a';
-
-const openWeatherMapURL = 'https://api.openweathermap.org/data/2.5/weather';
