@@ -1,6 +1,6 @@
 # myiphoneweather
 
-A copy of the iPhone weather app.
+I tried to replicate the iPhone weather app as close as possible.
 
 ## Getting Started
 
